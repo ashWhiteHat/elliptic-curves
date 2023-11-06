@@ -584,6 +584,9 @@ dependencies = [
 [[package]]
 name = "k224"
 version = "0.1.0"
+dependencies = [
+ "elliptic-curve",
+]
 
 [[package]]
 name = "k256"
