@@ -9,7 +9,8 @@ use field_5x52::FieldElement5x52 as FieldElementImpl;
 #[cfg(debug_assertions)]
 use field_impl::FieldElementImpl;
 
-use elliptic_curve::subtle::Choice;
+use crate::FieldBytes;
+use elliptic_curve::subtle::{Choice, CtOption};
 
 /// An element in the finite field used for curve coordinates.
 #[derive(Clone, Copy, Debug)]
@@ -47,5 +48,24 @@ impl FieldElement {
     /// If odd, return `Choice(1)`.  Otherwise, return `Choice(0)`.
     pub fn is_odd(&self) -> Choice {
         self.0.is_odd()
+    }
+
+    /// Attempts to parse the given byte array as an SEC1-encoded field element.
+    /// Does not check the result for being in the correct range.
+    pub(crate) const fn from_bytes_unchecked(bytes: &[u8; 28]) -> Self {
+        Self(FieldElementImpl::from_bytes_unchecked(bytes))
+    }
+
+    /// Attempts to parse the given byte array as an SEC1-encoded field element.
+    ///
+    /// Returns None if the byte array does not contain a big-endian integer in the range
+    /// [0, p).
+    pub fn from_bytes(bytes: &FieldBytes) -> CtOption<Self> {
+        FieldElementImpl::from_bytes(bytes).map(Self)
+    }
+
+    /// Convert a `u64` to a field element.
+    pub const fn from_u64(w: u64) -> Self {
+        Self(FieldElementImpl::from_u64(w))
     }
 }

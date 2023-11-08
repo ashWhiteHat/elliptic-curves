@@ -1,6 +1,6 @@
 use crate::FieldBytes;
 use elliptic_curve::{
-    subtle::{Choice, ConditionallySelectable, ConstantTimeEq},
+    subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption},
     zeroize::Zeroize,
 };
 
@@ -60,6 +60,11 @@ impl FieldElementImpl {
 
     pub(crate) const fn from_u64(val: u64) -> Self {
         Self::new_normalized(&FieldElementUnsafeImpl::from_u64(val))
+    }
+
+    pub fn from_bytes(bytes: &FieldBytes) -> CtOption<Self> {
+        let value = FieldElementUnsafeImpl::from_bytes(bytes);
+        CtOption::map(value, |x| Self::new_normalized(&x))
     }
 
     pub fn to_bytes(self) -> FieldBytes {
