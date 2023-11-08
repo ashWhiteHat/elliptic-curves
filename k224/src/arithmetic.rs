@@ -2,6 +2,10 @@
 
 pub(crate) mod affine;
 mod field;
+pub(crate) mod projective;
+
+pub(crate) mod scalar;
 
 pub use field::FieldElement;
-pub(crate) mod scalar;
+
+use self::{affine::AffinePoint, projective::ProjectivePoint, scalar::Scalar};

@@ -10,7 +10,11 @@ use field_5x52::FieldElement5x52 as FieldElementImpl;
 use field_impl::FieldElementImpl;
 
 use crate::FieldBytes;
-use elliptic_curve::subtle::{Choice, CtOption};
+use core::ops::{Add, AddAssign, Neg, Sub, SubAssign};
+use elliptic_curve::{
+    subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption},
+    zeroize::DefaultIsZeroes,
+};
 
 /// An element in the finite field used for curve coordinates.
 #[derive(Clone, Copy, Debug)]
@@ -67,5 +71,132 @@ impl FieldElement {
     /// Convert a `u64` to a field element.
     pub const fn from_u64(w: u64) -> Self {
         Self(FieldElementImpl::from_u64(w))
+    }
+
+    /// Returns -self, treating it as a value of given magnitude.
+    /// The provided magnitude must be equal or greater than the actual magnitude of `self`.
+    pub fn negate(&self, magnitude: u32) -> Self {
+        Self(self.0.negate(magnitude))
+    }
+
+    /// Multiplies by a single-limb integer.
+    /// Multiplies the magnitude by the same value.
+    pub fn mul_single(&self, rhs: u32) -> Self {
+        Self(self.0.mul_single(rhs))
+    }
+}
+
+impl ConditionallySelectable for FieldElement {
+    #[inline(always)]
+    fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
+        Self(FieldElementImpl::conditional_select(&(a.0), &(b.0), choice))
+    }
+}
+
+impl ConstantTimeEq for FieldElement {
+    fn ct_eq(&self, other: &Self) -> Choice {
+        self.0.ct_eq(&(other.0))
+    }
+}
+
+impl Default for FieldElement {
+    fn default() -> Self {
+        Self::ZERO
+    }
+}
+
+impl DefaultIsZeroes for FieldElement {}
+
+impl Eq for FieldElement {}
+
+impl From<u64> for FieldElement {
+    fn from(k: u64) -> Self {
+        Self(FieldElementImpl::from_u64(k))
+    }
+}
+
+impl PartialEq for FieldElement {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.ct_eq(&(other.0)).into()
+    }
+}
+
+impl Add<FieldElement> for FieldElement {
+    type Output = FieldElement;
+
+    fn add(self, other: FieldElement) -> FieldElement {
+        FieldElement(self.0.add(&(other.0)))
+    }
+}
+
+impl Add<&FieldElement> for FieldElement {
+    type Output = FieldElement;
+
+    fn add(self, other: &FieldElement) -> FieldElement {
+        FieldElement(self.0.add(&(other.0)))
+    }
+}
+
+impl Add<&FieldElement> for &FieldElement {
+    type Output = FieldElement;
+
+    fn add(self, other: &FieldElement) -> FieldElement {
+        FieldElement(self.0.add(&(other.0)))
+    }
+}
+
+impl AddAssign<FieldElement> for FieldElement {
+    fn add_assign(&mut self, other: FieldElement) {
+        *self = *self + &other;
+    }
+}
+
+impl AddAssign<&FieldElement> for FieldElement {
+    fn add_assign(&mut self, other: &FieldElement) {
+        *self = *self + other;
+    }
+}
+
+impl Sub<FieldElement> for FieldElement {
+    type Output = FieldElement;
+
+    fn sub(self, other: FieldElement) -> FieldElement {
+        self + -other
+    }
+}
+
+impl Sub<&FieldElement> for FieldElement {
+    type Output = FieldElement;
+
+    fn sub(self, other: &FieldElement) -> FieldElement {
+        self + -other
+    }
+}
+
+impl SubAssign<FieldElement> for FieldElement {
+    fn sub_assign(&mut self, other: FieldElement) {
+        *self = *self + -other;
+    }
+}
+
+impl SubAssign<&FieldElement> for FieldElement {
+    fn sub_assign(&mut self, other: &FieldElement) {
+        *self = *self + -other;
+    }
+}
+
+impl Neg for FieldElement {
+    type Output = FieldElement;
+
+    fn neg(self) -> FieldElement {
+        self.negate(1)
+    }
+}
+
+impl Neg for &FieldElement {
+    type Output = FieldElement;
+
+    fn neg(self) -> FieldElement {
+        self.negate(1)
     }
 }

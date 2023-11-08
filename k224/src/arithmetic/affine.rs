@@ -2,10 +2,15 @@
 
 #![allow(clippy::op_ref)]
 
-use super::FieldElement;
+use super::{FieldElement, ProjectivePoint, Scalar};
 use crate::FieldBytes;
 use core::ops::{Mul, Neg};
-use elliptic_curve::{point::AffineCoordinates, subtle::Choice};
+use elliptic_curve::{
+    group::{prime::PrimeCurveAffine, GroupEncoding},
+    point::{AffineCoordinates, DecompactPoint, DecompressPoint},
+    subtle::{Choice, ConditionallySelectable, ConstantTimeEq},
+    zeroize::DefaultIsZeroes,
+};
 
 /// secp224k1 curve point expressed in affine coordinates.
 ///
@@ -67,5 +72,72 @@ impl AffinePoint {
     /// Create a new [`AffinePoint`] with the given coordinates.
     pub(crate) const fn new(x: FieldElement, y: FieldElement) -> Self {
         Self { x, y, infinity: 0 }
+    }
+}
+
+impl PrimeCurveAffine for AffinePoint {
+    type Scalar = Scalar;
+    type Curve = ProjectivePoint;
+
+    /// Returns the identity of the group: the point at infinity.
+    fn identity() -> Self {
+        Self::IDENTITY
+    }
+
+    /// Returns the base point of secp256k1.
+    fn generator() -> Self {
+        Self::GENERATOR
+    }
+
+    /// Is this point the identity point?
+    fn is_identity(&self) -> Choice {
+        Choice::from(self.infinity)
+    }
+
+    /// Convert to curve representation.
+    fn to_curve(&self) -> ProjectivePoint {
+        ProjectivePoint::from(*self)
+    }
+}
+
+impl ConditionallySelectable for AffinePoint {
+    fn conditional_select(a: &AffinePoint, b: &AffinePoint, choice: Choice) -> AffinePoint {
+        AffinePoint {
+            x: FieldElement::conditional_select(&a.x, &b.x, choice),
+            y: FieldElement::conditional_select(&a.y, &b.y, choice),
+            infinity: u8::conditional_select(&a.infinity, &b.infinity, choice),
+        }
+    }
+}
+
+impl Default for AffinePoint {
+    fn default() -> Self {
+        Self::IDENTITY
+    }
+}
+
+impl DefaultIsZeroes for AffinePoint {}
+
+impl PartialEq for AffinePoint {
+    fn eq(&self, other: &AffinePoint) -> bool {
+        self.ct_eq(other).into()
+    }
+}
+
+impl Eq for AffinePoint {}
+
+impl Mul<Scalar> for AffinePoint {
+    type Output = ProjectivePoint;
+
+    fn mul(self, scalar: Scalar) -> ProjectivePoint {
+        ProjectivePoint::from(self) * scalar
+    }
+}
+
+impl Mul<&Scalar> for AffinePoint {
+    type Output = ProjectivePoint;
+
+    fn mul(self, scalar: &Scalar) -> ProjectivePoint {
+        ProjectivePoint::from(self) * scalar
     }
 }
