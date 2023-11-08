@@ -44,9 +44,22 @@ impl FieldElementImpl {
         }
     }
 
+    fn new(value: &FieldElementUnsafeImpl, magnitude: u32) -> Self {
+        debug_assert!(magnitude <= FieldElementUnsafeImpl::max_magnitude());
+        Self {
+            value: *value,
+            magnitude,
+            normalized: false,
+        }
+    }
+
     pub(crate) const fn from_bytes_unchecked(bytes: &[u8; 28]) -> Self {
         let value = FieldElementUnsafeImpl::from_bytes_unchecked(bytes);
         Self::new_normalized(&value)
+    }
+
+    pub(crate) const fn from_u64(val: u64) -> Self {
+        Self::new_normalized(&FieldElementUnsafeImpl::from_u64(val))
     }
 
     pub fn to_bytes(self) -> FieldBytes {
@@ -62,6 +75,25 @@ impl FieldElementImpl {
     pub fn is_odd(&self) -> Choice {
         debug_assert!(self.normalized);
         self.value.is_odd()
+    }
+
+    pub fn negate(&self, magnitude: u32) -> Self {
+        debug_assert!(self.magnitude <= magnitude);
+        let new_magnitude = magnitude + 1;
+        debug_assert!(new_magnitude <= FieldElementUnsafeImpl::max_magnitude());
+        Self::new(&(self.value.negate(magnitude)), new_magnitude)
+    }
+
+    pub fn add(&self, rhs: &Self) -> Self {
+        let new_magnitude = self.magnitude + rhs.magnitude;
+        debug_assert!(new_magnitude <= FieldElementUnsafeImpl::max_magnitude());
+        Self::new(&(self.value.add(&(rhs.value))), new_magnitude)
+    }
+
+    pub fn mul_single(&self, rhs: u32) -> Self {
+        let new_magnitude = self.magnitude * rhs;
+        debug_assert!(new_magnitude <= FieldElementUnsafeImpl::max_magnitude());
+        Self::new(&(self.value.mul_single(rhs)), new_magnitude)
     }
 }
 

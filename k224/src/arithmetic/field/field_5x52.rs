@@ -3,7 +3,7 @@
 
 use crate::FieldBytes;
 use elliptic_curve::{
-    subtle::{Choice, ConditionallySelectable, ConstantTimeEq},
+    subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption},
     zeroize::Zeroize,
 };
 
@@ -62,6 +62,16 @@ impl FieldElement5x52 {
         Self([w0, w1, w2, w3, w4])
     }
 
+    /// Attempts to parse the given byte array as an SEC1-encoded field element.
+    ///
+    /// Returns None if the byte array does not contain a big-endian integer in the range
+    /// [0, p).
+    pub fn from_bytes(bytes: &FieldBytes) -> CtOption<Self> {
+        let res = Self::from_bytes_unchecked(bytes.as_ref());
+        let overflow = res.get_overflow();
+        CtOption::new(res, !overflow)
+    }
+
     pub const fn from_u64(val: u64) -> Self {
         let w0 = val & 0xFFFFFFFFFFFFF;
         let w1 = val >> 52;
@@ -102,6 +112,16 @@ impl FieldElement5x52 {
         ret
     }
 
+    /// Checks if the field element is greater or equal to the modulus.
+    fn get_overflow(&self) -> Choice {
+        let m = self.0[1] & self.0[2] & self.0[3];
+        let x = (self.0[4] >> 16 != 0)
+            | ((self.0[4] == 0x000000000FFFFu64)
+                & (m == 0xFFFFFFFFFFFFFu64)
+                & (self.0[0] >= 0xFFFFEFFFFE56Du64));
+        Choice::from(x as u8)
+    }
+
     /// Determine if this `FieldElement5x52` is zero.
     ///
     /// # Returns
@@ -118,6 +138,26 @@ impl FieldElement5x52 {
     /// If odd, return `Choice(1)`.  Otherwise, return `Choice(0)`.
     pub fn is_odd(&self) -> Choice {
         (self.0[0] as u8 & 1).into()
+    }
+
+    // LESS CONFIDENCE
+    /// The maximum number `m` for which `0xFFFFFFFFFFFFF * 2 * (m + 1) < 2^64`
+    #[cfg(debug_assertions)]
+    pub const fn max_magnitude() -> u32 {
+        2047u32
+    }
+
+    /// Returns -self, treating it as a value of given magnitude.
+    /// The provided magnitude must be equal or greater than the actual magnitude of `self`.
+    /// Raises the magnitude by 1.
+    pub const fn negate(&self, magnitude: u32) -> Self {
+        let m = (magnitude + 1) as u64;
+        let r0 = 0xFFFFEFFFFE56Du64 * 2 * m - self.0[0];
+        let r1 = 0xFFFFFFFFFFFFFu64 * 2 * m - self.0[1];
+        let r2 = 0xFFFFFFFFFFFFFu64 * 2 * m - self.0[2];
+        let r3 = 0xFFFFFFFFFFFFFu64 * 2 * m - self.0[3];
+        let r4 = 0x000000000FFFFu64 * 2 * m - self.0[4];
+        Self([r0, r1, r2, r3, r4])
     }
 
     /// Returns self + rhs mod p.
