@@ -30,7 +30,7 @@ mod arithmetic;
 
 pub use arithmetic::FieldElement;
 
-pub use elliptic_curve;
+pub use elliptic_curve::{self, bigint::U256};
 
 use elliptic_curve::{
     consts::{U28, U29},
@@ -38,15 +38,11 @@ use elliptic_curve::{
     FieldBytesEncoding,
 };
 
-#[cfg(target_pointer_width = "32")]
-pub use elliptic_curve::bigint::U224 as Uint;
-
-#[cfg(target_pointer_width = "64")]
-use elliptic_curve::bigint::U256 as Uint;
-
 /// Order of the secp224k1 elliptic curve in hexadecimal.
-#[cfg(any(target_pointer_width = "32", feature = "arithmetic"))]
-const ORDER_HEX: &str = "10000000000000000000000000001DCE8D2EC6184CAF0A971769FB1F7";
+const ORDER_HEX: &str = "000000010000000000000000000000000001DCE8D2EC6184CAF0A971769FB1F7";
+
+/// Order of the secp224k1 elliptic curve.
+const ORDER: U256 = U256::from_be_hex(ORDER_HEX);
 
 /// secp224k1 (K-224) elliptic curve.
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, PartialOrd, Ord)]
@@ -56,17 +52,11 @@ impl elliptic_curve::Curve for Secp224k1 {
     /// 28-byte serialized field elements.
     type FieldBytesSize = U28;
 
-    /// Big integer type used for representing field elements.
-    type Uint = Uint;
+    /// 256-bit field modulus.
+    type Uint = U256;
 
-    /// Order of NIST P-224's elliptic curve group (i.e. scalar modulus).
-    #[cfg(target_pointer_width = "32")]
-    const ORDER: Uint = Uint::from_be_hex(ORDER_HEX);
-
-    /// Order of NIST P-224's elliptic curve group (i.e. scalar modulus).
-    #[cfg(target_pointer_width = "64")]
-    const ORDER: Uint =
-        Uint::from_be_hex("000000010000000000000000000000000001DCE8D2EC6184CAF0A971769FB1F7");
+    /// Curve order.
+    const ORDER: U256 = ORDER;
 }
 
 impl elliptic_curve::PrimeCurve for Secp224k1 {}
@@ -79,7 +69,7 @@ pub type CompressedPoint = GenericArray<u8, U29>;
 /// Byte array containing a serialized field element value (base field or scalar).
 pub type FieldBytes = elliptic_curve::FieldBytes<Secp224k1>;
 
-impl FieldBytesEncoding<Secp224k1> for Uint {}
+impl FieldBytesEncoding<Secp224k1> for U256 {}
 
 /// secp224k1 (K-224) secret key.
 pub type SecretKey = elliptic_curve::SecretKey<Secp224k1>;
