@@ -26,6 +26,10 @@
 //!
 //! Please see type-specific documentation for more information.
 
+mod arithmetic;
+
+pub use arithmetic::FieldElement;
+
 pub use elliptic_curve;
 
 use elliptic_curve::{

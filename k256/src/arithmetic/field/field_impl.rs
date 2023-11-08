@@ -22,7 +22,7 @@ pub struct FieldElementImpl {
 }
 
 impl FieldElementImpl {
-    /// Zero element.
+    /// Additive identity.
     pub const ZERO: Self = Self {
         value: FieldElementUnsafeImpl::ZERO,
         magnitude: 1,

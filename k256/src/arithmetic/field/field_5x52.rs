@@ -16,7 +16,7 @@ use elliptic_curve::{
 pub struct FieldElement5x52(pub(crate) [u64; 5]);
 
 impl FieldElement5x52 {
-    /// Zero element.
+    /// Additive identity.
     pub const ZERO: Self = Self([0, 0, 0, 0, 0]);
 
     /// Multiplicative identity.
